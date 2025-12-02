@@ -189,21 +189,6 @@ def get_user_profile(username: str) -> dict:
 from auth_module import init_users_sheet_once, signup_view, login_view
 init_users_sheet_once()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 st.sidebar.title("Tài khoản")
 if not st.session_state.get("auth", False):
     mode = st.sidebar.radio("Chọn", ["Đăng nhập", "Đăng ký"], horizontal=True)
@@ -1246,6 +1231,7 @@ elif section == "Lịch sử giao dịch":
                     st.warning(f"❌ Lý do: {r.get('note','Không xác định')}")
                 elif r['status'] == "Thành công":
                     st.success("✅ Giao dịch hoàn tất.")
+
 
 
 
