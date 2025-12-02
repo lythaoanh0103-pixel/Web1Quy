@@ -91,9 +91,10 @@ def gs_client():
         "https://www.googleapis.com/auth/drive.file",
         "https://www.googleapis.com/auth/drive",
     ]
-    try:
+    # luôn dùng secrets khi deploy
+    if "gcp_service_account" in st.secrets:
         creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
-    except Exception:
+    else:
         creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
     return gspread.authorize(creds)
 
@@ -1231,6 +1232,7 @@ elif section == "Lịch sử giao dịch":
                     st.warning(f"❌ Lý do: {r.get('note','Không xác định')}")
                 elif r['status'] == "Thành công":
                     st.success("✅ Giao dịch hoàn tất.")
+
 
 
 
