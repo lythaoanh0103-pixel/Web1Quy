@@ -14,8 +14,24 @@ import bcrypt
 
 
 
+
+
+
+
+
+
+
+
 # ================== CẤU HÌNH CƠ BẢN ================== #
 st.set_page_config(page_title="Quản Lý Quỹ", page_icon="📊", layout="wide")
+
+
+
+
+
+
+
+
 
 
 
@@ -42,8 +58,24 @@ st.markdown(hide_ui, unsafe_allow_html=True)
 
 
 
+
+
+
+
+
+
+
+
 # ================== GOOGLE SHEETS ================== #
 SHEET_ID = "1icpLUH3UNvMKuoB_hdiCTiwZ-tbY9aPJEOHGSfBWECY"
+
+
+
+
+
+
+
+
 
 
 
@@ -72,6 +104,14 @@ def gs_client():
 
 
 
+
+
+
+
+
+
+
+
 @st.cache_data(ttl=100)
 def read_df(ws_name):
     sh = gs_client().open_by_key(SHEET_ID)
@@ -88,9 +128,25 @@ def read_df(ws_name):
 
 
 
+
+
+
+
+
+
+
+
 def append_row(ws_name, values):
     sh = gs_client().open_by_key(SHEET_ID)
     sh.worksheet(ws_name).append_row(values)
+
+
+
+
+
+
+
+
 
 
 
@@ -140,12 +196,28 @@ init_users_sheet_once()
 
 
 
+
+
+
+
+
+
+
+
 st.sidebar.title("Tài khoản")
 if not st.session_state.get("auth", False):
     mode = st.sidebar.radio("Chọn", ["Đăng nhập", "Đăng ký"], horizontal=True)
     if mode == "Đăng ký": signup_view()
     else: login_view()
     st.stop()
+
+
+
+
+
+
+
+
 
 
 
@@ -162,6 +234,14 @@ try:
     ].values[0].strip().lower()
 except Exception:
     role = "investor"
+
+
+
+
+
+
+
+
 
 
 
@@ -195,64 +275,29 @@ else:
 
 
 
+
+
+
+
+
+
+
+
 # ================== PAGE: ADMIN - TRANG CHỦ (TỔNG QUAN QUỸ) ================== #
 if role == "admin" and section == "Trang chủ":
     st.title("📊 Dashboard Tổng Quan Tất Cả Quỹ")
-
-
-
-
-
-
-
-
     try:
         df = read_df("Tổng Quan")
     except Exception as e:
         st.error(f"Lỗi đọc sheet: {e}")
         st.stop()
-
-
-
-
-
-
-
-
     if df.empty:
         st.info("Chưa có dữ liệu Tổng Quan.")
     else:
         df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
-        funds = sorted(df["fund_name"].dropna().unique())
-        picked_fund = st.selectbox("Chọn quỹ để xem chi tiết", funds)
-        fund_df = df[df["fund_name"] == picked_fund]
-
-
-
-
-
-
-
-
-        st.dataframe(fund_df, use_container_width=True)
-
-
-
-
-
-
-
-
-        if "hang_muc" in fund_df.columns:
-            detail_df = fund_df[fund_df["hang_muc"].astype(str).str.lower() != "tổng"]
-
-
-
-
-
-
-
-
+        st.dataframe(use_container_width=True)
+        if "hang_muc" in df.columns:
+            detail_df = df[df["hang_muc"].astype(str).str.lower() != "tổng"]
             if "tỷ_trọng" in detail_df.columns:
                 st.subheader("🥧 Cơ cấu tỷ trọng")
                 pie = (
@@ -265,14 +310,6 @@ if role == "admin" and section == "Trang chủ":
                     )
                 )
                 st.altair_chart(pie, use_container_width=True)
-
-
-
-
-
-
-
-
             if "lợi_suất" in detail_df.columns:
                 st.subheader("📈 Biểu đồ lợi suất")
                 line = (
@@ -285,14 +322,6 @@ if role == "admin" and section == "Trang chủ":
                     )
                 )
                 st.altair_chart(line, use_container_width=True)
-
-
-
-
-
-
-
-
             if {"cơ_cấu_vốn_mục_tiêu","cơ_cấu_vốn_thực_tế"}.issubset(detail_df.columns):
                 st.subheader("🧱 Cơ cấu vốn mục tiêu vs thực tế")
                 co = detail_df[["hang_muc","cơ_cấu_vốn_mục_tiêu","cơ_cấu_vốn_thực_tế"]].melt(
@@ -315,21 +344,115 @@ if role == "admin" and section == "Trang chủ":
 
 
 
-    # ---- NAV gần đây ---- #
+
+
+
+
+
+
+
+
+    # ---- Tổng quan ---- #
     st.divider()
-    st.subheader("📌 NAV gần đây")
+    st.subheader("Tổng Quan")
     try:
-        df_nav = read_df("Giá trị tài sản ròng")
-        if not df_nav.empty:
-            df_nav["date"] = pd.to_datetime(df_nav["date"], errors="coerce").dt.date
-            pick = st.selectbox("Chọn quỹ để xem NAV", sorted(df_nav["fund_name"].unique()), key="admin_nav_select")
-            nav_sel = df_nav[df_nav["fund_name"] == pick]
-            st.line_chart(nav_sel.set_index("date")["nav_per_unit"])
-            st.dataframe(nav_sel.tail(10), use_container_width=True)
-        else:
-            st.info("Chưa có dữ liệu NAV.")
+                df_quan = read_df("Tổng Quan").copy()
     except Exception as e:
-        st.error(f"Lỗi đọc NAV: {e}")
+                st.error(f"Lỗi đọc 'Tổng Quan': {e}")
+    else:
+                if df_quan.empty:
+                    st.info("Chưa có dữ liệu trong 'Tổng Quan'.")
+                else:
+                    # Nếu muốn chuẩn hoá tên cột / kiểu trước khi hiển thị, làm ở đây
+                    # ví dụ: df_quan.columns = [str(c).strip() for c in df_quan.columns]
+
+
+
+
+
+
+
+
+                    # Hiển thị nguyên bảng (không lọc)
+                    st.dataframe(df_quan, use_container_width=True)
+    # ---- Danh mục đầu tư ---- #
+    st.subheader("Danh mục đầu tư")
+    try:
+            df_quan = read_df("Danh mục đầu tư").copy()
+    except Exception as e:
+                    st.error(f"Lỗi đọc 'Danh mục đầu tư': {e}")
+    else:
+                    if df_quan.empty:
+                        st.info("Chưa có dữ liệu trong 'Danh mục đầu tư'.")
+                    else:
+                        # Nếu muốn chuẩn hoá tên cột / kiểu trước khi hiển thị, làm ở đây
+                        # ví dụ: df_quan.columns = [str(c).strip() for c in df_quan.columns]
+
+
+
+
+
+
+
+
+                        # Hiển thị nguyên bảng (không lọc)
+                        st.dataframe(df_quan, use_container_width=True)
+    # Giá trị tài sản ròng
+    st.subheader("Giá trị tài sản ròng")
+    try:
+                df_quan = read_df("Giá trị tài sản ròng").copy()
+    except Exception as e:
+                st.error(f"Lỗi đọc 'Giá trị tài sản ròng': {e}")
+    else:
+                if df_quan.empty:
+                    st.info("Chưa có dữ liệu trong 'Giá trị tài sản ròng'.")
+                else:
+                    # Nếu muốn chuẩn hoá tên cột / kiểu trước khi hiển thị, làm ở đây
+                    # ví dụ: df_quan.columns = [str(c).strip() for c in df_quan.columns]
+
+
+
+
+
+
+
+
+                    # Hiển thị nguyên bảng (không lọc)
+                    st.dataframe(df_quan, use_container_width=True)
+                # --- Biểu đồ lợi suất ---
+    # Biểu đồ 1
+    chart_url_1 = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS6e2vjKnnOkuR0647fha62VSxjNeLncCdlS_reyVG0GdgS7FPCmS3PlUX6RnM0bGyDIeYceVbBZmCq/pubchart?oid=733015883&format=interactive"
+    st.markdown("#### 🟦Tỷ trọng")
+    st.components.v1.iframe(chart_url_1, height=480)
+
+
+
+
+
+
+
+
+    chart_url_3= "https://docs.google.com/spreadsheets/d/e/2PACX-1vS6e2vjKnnOkuR0647fha62VSxjNeLncCdlS_reyVG0GdgS7FPCmS3PlUX6RnM0bGyDIeYceVbBZmCq/pubchart?oid=2140726944&format=interactive"
+    st.markdown("#### 🟩 Cơ cấu vốn")
+    st.components.v1.iframe(chart_url_3,height=900)
+
+
+
+
+
+
+
+
+    chart_url_4= "https://docs.google.com/spreadsheets/d/e/2PACX-1vS6e2vjKnnOkuR0647fha62VSxjNeLncCdlS_reyVG0GdgS7FPCmS3PlUX6RnM0bGyDIeYceVbBZmCq/pubchart?oid=733015883&format=interactive"
+    st.markdown("#### 🟩 Biểu đồ lợi suất")
+    st.components.v1.iframe(chart_url_4,height=480)
+    chart_url_5="https://docs.google.com/spreadsheets/d/e/2PACX-1vS6e2vjKnnOkuR0647fha62VSxjNeLncCdlS_reyVG0GdgS7FPCmS3PlUX6RnM0bGyDIeYceVbBZmCq/pubchart?oid=759647822&format=interactive"
+    st.markdown("#### 🟩 Tổng vốn đầu tư và tổng giá trị thị trường")
+    st.components.v1.iframe(chart_url_5,height=900, width=900)
+   
+    st.info("📈 Biểu đồ hiển thị trực tiếp từ Google Sheets (cập nhật realtime khi bạn thay đổi chart trong file).")
+   
+    st.divider()
 
 
 
@@ -341,109 +464,154 @@ if role == "admin" and section == "Trang chủ":
 # ================== PAGE: ADMIN - QUẢN LÝ KHÁCH HÀNG ================== #
 if role == "admin" and section == "Quản lý khách hàng":
     st.title("📂 Quản lý khách hàng")
-    df_users = read_df("Users")
+
+
+    try:
+        df_users = read_df("Users")
+    except Exception as e:
+        st.error(f"Lỗi khi đọc sheet Users: {e}")
+        st.stop()
+
+
     if df_users.empty:
         st.warning("Chưa có người dùng nào.")
     else:
         df_users = df_users.fillna("")
         st.dataframe(df_users, use_container_width=True)
-        selected = st.selectbox("Chọn khách hàng để xem giao dịch", df_users["username"])
-        if selected:
-            df_txn = read_df("YCGD")
-            df_txn = df_txn[df_txn["investor_name"].astype(str).str.lower() == selected.lower()]
-            if df_txn.empty:
-                st.info("Khách hàng này chưa có giao dịch.")
-            else:
-                st.dataframe(df_txn, use_container_width=True)
+
+
+        if "username" not in df_users.columns:
+            st.warning("Sheet Users cần cột 'username' để lọc giao dịch.")
+        else:
+            selected = st.selectbox("Chọn khách hàng để xem giao dịch", df_users["username"])
+            if selected:
+                try:
+                    df_txn = read_df("YCGD")
+                except Exception as e:
+                    st.error(f"Lỗi đọc sheet YCGD: {e}")
+                else:
+                    if df_txn.empty or "investor_name" not in df_txn.columns:
+                        st.info("Chưa có giao dịch nào hoặc thiếu cột 'investor_name' trong YCGD.")
+                    else:
+                        df_txn = df_txn.fillna("")
+                        df_txn_sel = df_txn[
+                            df_txn["investor_name"].astype(str).str.lower()
+                            == str(selected).lower()
+                        ]
+                        if df_txn_sel.empty:
+                            st.info("Khách hàng này chưa có giao dịch.")
+                        else:
+                            st.subheader(f"Giao dịch của {selected}")
+                            st.dataframe(df_txn_sel, use_container_width=True)
+
+
+
+
 # ================== PAGE: ADMIN - DUYỆT YÊU CẦU CCQ ================== #
 elif role == "admin" and section == "Duyệt yêu cầu CCQ":
     st.title("🧾 Duyệt yêu cầu mua CCQ")
-    df = read_df("YCGD")
 
 
-
-
-
-
+    try:
+        df = read_df("YCGD")
+    except Exception as e:
+        st.error(f"Lỗi đọc sheet YCGD: {e}")
+        st.stop()
 
 
     if df.empty:
-        st.info("Không có yêu cầu.")
+        st.info("Không có yêu cầu nào.")
     else:
         df = df.fillna("")
-        df.reset_index(inplace=True)
-        pending_df = df[df["status"].astype(str).str.strip().str.lower().isin(["pending", "chờ thanh toán"])]
+        df.reset_index(inplace=True)  # tạo cột 'index' để tính dòng trong sheet
 
 
+        # Chuẩn hoá cột status (nếu chưa có thì tạo)
+        if "status" not in df.columns:
+            df["status"] = "PENDING"
 
 
+        # lọc các trạng thái cần xử lý
+        pending_df = df[
+            df["status"]
+              .astype(str)
+              .str.strip()
+              .str.lower()
+              .isin(["pending", "chờ thanh toán"])
+        ]
 
 
+        if pending_df.empty:
+            st.info("Không có yêu cầu đang chờ xử lý.")
+        else:
+            for i, r in pending_df.iterrows():
+                # fund_name có thể có hoặc không
+                fund_label = r.get("fund_name", "")
+                title = f"{r.get('investor_name','(Không tên)')}"
+                if fund_label:
+                    title += f" - {fund_label}"
+                title += f" ({r.get('status','')})"
 
 
-        for i, r in pending_df.iterrows():
-            with st.expander(f"{r['investor_name']} - {r['fund_name']} ({r['status']})"):
-                st.write(f"Số tiền: {r['amount_vnd']}")
-                st.write(f"Thời gian: {r['timestamp']}")
-                status = r["status"].strip().lower()
+                with st.expander(title):
+                    st.write(f"💰 Số tiền: {r.get('amount_vnd','')}")
+                    st.write(f"⏰ Thời gian: {r.get('timestamp','')}")
+                    status = str(r.get("status", "")).strip().lower()
 
 
+                    sheet_row = int(r["index"]) + 2  # +1 vì index 0-based, +1 vì dòng header
 
 
+                    # --- B1: DUYỆT YÊU CẦU (PENDING) ---
+                    if status == "pending":
+                        c1, c2 = st.columns(2)
 
 
+                        if c1.button("✅ Duyệt", key=f"approve_{i}"):
+                            try:
+                                update_cell("YCGD", sheet_row, 5, "Chờ thanh toán")
+                                update_cell("YCGD", sheet_row, 6, "Đã duyệt")
+                                st.success(f"Đã duyệt yêu cầu của {r.get('investor_name','')}")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Lỗi khi duyệt: {e}")
 
 
-                # --- B1: DUYỆT ---
-                if status == "pending":
-                    c1, c2 = st.columns(2)
-                    if c1.button("✅ Duyệt", key=f"approve_{i}"):
-                        update_cell("YCGD", r["index"] + 2, 5, "Chờ thanh toán")
-                        update_cell("YCGD", r["index"] + 2, 6, "Đã duyệt")
-                        st.success(f"Đã duyệt yêu cầu của {r['investor_name']}")
-                        st.rerun()
+                        if c2.button("❌ Từ chối", key=f"reject_{i}"):
+                            note = st.text_input("Lý do từ chối", key=f"note_{i}")
+                            if note:
+                                try:
+                                    update_cell("YCGD", sheet_row, 5, "Không thành công")
+                                    update_cell("YCGD", sheet_row, 6, f"Từ chối: {note}")
+                                    st.warning(f"Đã từ chối yêu cầu của {r.get('investor_name','')}")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Lỗi khi từ chối: {e}")
 
 
+                    # --- B2: XÁC NHẬN THANH TOÁN ---
+                    elif status == "chờ thanh toán":
+                        if st.button("💰 Đã thanh toán", key=f"paid_{i}"):
+                            try:
+                                # Cập nhật trạng thái
+                                update_cell("YCGD", sheet_row, 5, "Thành công")
+                                update_cell("YCGD", sheet_row, 7, "FALSE")
 
 
+                                # Ghi log vào sheet "Giao dịch chứng chỉ quỹ"
+                                append_row("Giao dịch chứng chỉ quỹ", [
+                                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                    r.get("investor_name", ""),
+                                    r.get("fund_name", ""),
+                                    r.get("amount_vnd", 0),
+                                    "SUCCESS",
+                                ])
 
 
-
-
-                    if c2.button("❌ Từ chối", key=f"reject_{i}"):
-                        note = st.text_input("Lý do từ chối", key=f"note_{i}")
-                        if note:
-                            update_cell("YCGD", r["index"] + 2, 5, "Không thành công")
-                            update_cell("YCGD", r["index"] + 2, 6, f"Từ chối: {note}")
-                            st.warning(f"Đã từ chối yêu cầu của {r['investor_name']}")
-                            st.rerun()
-
-
-
-
-
-
-
-
-                # --- B2: XÁC NHẬN THANH TOÁN ---
-                elif status == "chờ thanh toán":
-                    if st.button("💰 Đã thanh toán", key=f"paid_{i}"):
-                        update_cell("YCGD", i+2, 5, "Thành công")
-                        update_cell("YCGD", i+2, 7, "FALSE")
-                        # ✅ Ghi dòng tiền vào sheet Giao dịch chứng chỉ quỹ (chỉ 4 cột)
-                        append_row("Giao dịch chứng chỉ quỹ", [
-                            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            r["investor_name"],
-
-
-                            r["amount_vnd"]
-                        ])
-                        st.success("✅ Xác nhận thanh toán thành công và đã ghi vào dòng tiền.")
-                        st.rerun()
-
-
-
-
+                                st.success("✅ Xác nhận thanh toán thành công và đã ghi vào 'Giao dịch chứng chỉ quỹ'.")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Lỗi khi xác nhận thanh toán: {e}")
 
 
 
@@ -453,12 +621,6 @@ elif role == "admin" and section == "Lịch sử giao dịch chứng chỉ quỹ
     st.title("📜 Lịch sử giao dịch chứng chỉ quỹ")
 
 
-
-
-
-
-
-
     try:
         df = read_df("YCGD")
     except Exception as e:
@@ -466,85 +628,52 @@ elif role == "admin" and section == "Lịch sử giao dịch chứng chỉ quỹ
         st.stop()
 
 
-
-
-
-
-
-
     if df.empty:
         st.info("Chưa có giao dịch nào được ghi nhận.")
     else:
-        # Chuẩn hóa dữ liệu
-        df.columns = [c.strip().lower() for c in df.columns]
-        df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+        df = df.fillna("")
+        df.columns = [str(c).strip().lower() for c in df.columns]
 
 
-
-
-
-
+        if "timestamp" in df.columns:
+            df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
 
 
         # Bộ lọc
         col1, col2, col3 = st.columns(3)
         with col1:
-            status_filter = st.multiselect("Trạng thái", df["status"].unique().tolist())
+            status_filter = st.multiselect("Trạng thái", sorted(df.get("status", pd.Series()).unique()))
         with col2:
-            investor_filter = st.multiselect("Nhà đầu tư", df["investor_name"].unique().tolist())
+            investor_filter = st.multiselect("Nhà đầu tư", sorted(df.get("investor_name", pd.Series()).unique()))
         with col3:
             sort_order = st.radio("Sắp xếp theo thời gian", ["Mới nhất", "Cũ nhất"], horizontal=True)
 
 
-
-
-
-
-
-
-        # Áp dụng bộ lọc
         df_filtered = df.copy()
-        if status_filter:
+        if status_filter and "status" in df_filtered.columns:
             df_filtered = df_filtered[df_filtered["status"].isin(status_filter)]
-        if investor_filter:
+        if investor_filter and "investor_name" in df_filtered.columns:
             df_filtered = df_filtered[df_filtered["investor_name"].isin(investor_filter)]
 
 
-
-
-
-
-
-
-        df_filtered = df_filtered.sort_values(
-            by="timestamp", ascending=(sort_order == "Cũ nhất")
-        )
-
-
-
-
-
-
+        if "timestamp" in df_filtered.columns:
+            df_filtered = df_filtered.sort_values(
+                by="timestamp", ascending=(sort_order == "Cũ nhất")
+            )
 
 
         st.dataframe(df_filtered, use_container_width=True)
 
 
+        if "amount_vnd" in df_filtered.columns:
+            total_value = pd.to_numeric(df_filtered["amount_vnd"], errors="coerce").fillna(0).sum()
+        else:
+            total_value = 0
 
 
-
-
-
-
-        # Thống kê tổng quan
-        total_value = df_filtered["amount_vnd"].astype(float).sum()
-        col1, col2 = st.columns(2)
-        col1.metric("Tổng số giao dịch", len(df_filtered))
-        col2.metric("Tổng giá trị (VND)", f"{total_value:,.0f}")
-
-
-
-
+        c1, c2 = st.columns(2)
+        c1.metric("Tổng số giao dịch", len(df_filtered))
+        c2.metric("Tổng giá trị (VND)", f"{total_value:,.0f}")
 
 
 
@@ -552,81 +681,78 @@ elif role == "admin" and section == "Lịch sử giao dịch chứng chỉ quỹ
 # ================== PAGE: ADMIN - CẬP NHẬT DANH MỤC ================== #
 elif role == "admin" and section == "Cập nhật danh mục":
     st.title("📈 Cập nhật danh mục đầu tư")
+
+
     fund = st.text_input("Tên quỹ")
     ticker = st.text_input("Mã CK")
     side = st.selectbox("Loại giao dịch", ["BUY", "SELL"])
-    qty = st.number_input("Số lượng", min_value=0.0)
-    price = st.number_input("Giá", min_value=0.0)
-    fee = st.number_input("Phí", min_value=0.0)
+    qty = st.number_input("Số lượng", min_value=0.0, step=1.0)
+    price = st.number_input("Giá", min_value=0.0, step=100.0)
+    fee = st.number_input("Phí", min_value=0.0, step=100.0)
+
+
     if st.button("Ghi giao dịch"):
-        append_row("Danh mục đầu tư", [
-            fund, ticker, side, qty, price, fee,
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        ])
-        st.success("Đã ghi giao dịch.")
+        try:
+            append_row("Danh mục đầu tư", [
+                fund,
+                ticker,
+                side,
+                float(qty),
+                float(price),
+                float(fee),
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            ])
+            st.success("Đã ghi giao dịch vào 'Danh mục đầu tư'.")
+        except Exception as e:
+            st.error(f"Lỗi khi ghi giao dịch: {e}")
 
 
 
 
-
-
-
-
-# ================== PAGE: ADMIN - LỊCH SỬ GIAO DỊCH CỦA KHÁCH HÀNG ================== #
+# ================== PAGE: ADMIN - LỊCH SỬ GIAO DỊCH (TẤT CẢ NĐT) ================== #
 elif role == "admin" and section == "Lịch sử giao dịch":
     st.title("📜 Lịch sử giao dịch tất cả nhà đầu tư")
-    df_txn = read_df("YCGD")
 
 
-
-
-
-
+    try:
+        df_txn = read_df("YCGD")
+    except Exception as e:
+        st.error(f"Lỗi đọc sheet YCGD: {e}")
+        st.stop()
 
 
     if df_txn.empty:
         st.info("Chưa có dữ liệu.")
     else:
-        df_txn["timestamp"] = pd.to_datetime(df_txn["timestamp"], errors="coerce")
+        df_txn = df_txn.fillna("")
+        if "timestamp" in df_txn.columns:
+            df_txn["timestamp"] = pd.to_datetime(df_txn["timestamp"], errors="coerce")
 
 
-
-
-
-
-
-
-        # --- Bộ lọc ---
         col1, col2, col3 = st.columns(3)
         name_filter = col1.text_input("🔎 Lọc theo nhà đầu tư:")
-        status_filter = col2.selectbox("📊 Lọc trạng thái", ["Tất cả", "Pending", "Chờ thanh toán", "Thành công", "Không thành công"])
+        status_filter = col2.selectbox(
+            "📊 Lọc trạng thái",
+            ["Tất cả", "Pending", "Chờ thanh toán", "Thành công", "Không thành công"],
+        )
         sort_order = col3.radio("📅 Sắp xếp", ["Mới nhất", "Cũ nhất"], horizontal=True)
 
 
+        if name_filter and "investor_name" in df_txn.columns:
+            df_txn = df_txn[
+                df_txn["investor_name"].astype(str).str.contains(name_filter, case=False, na=False)
+            ]
+        if status_filter != "Tất cả" and "status" in df_txn.columns:
+            df_txn = df_txn[
+                df_txn["status"].astype(str).str.lower() == status_filter.lower()
+            ]
 
 
+        if "timestamp" in df_txn.columns:
+            df_txn = df_txn.sort_values("timestamp", ascending=(sort_order == "Cũ nhất"))
 
 
-
-
-        if name_filter:
-            df_txn = df_txn[df_txn["investor_name"].str.contains(name_filter, case=False, na=False)]
-        if status_filter != "Tất cả":
-            df_txn = df_txn[df_txn["status"].str.lower() == status_filter.lower()]
-
-
-
-
-
-
-
-
-        df_txn = df_txn.sort_values("timestamp", ascending=(sort_order == "Cũ nhất"))
         st.dataframe(df_txn, use_container_width=True)
-
-
-
-
 
 
 
@@ -634,37 +760,83 @@ elif role == "admin" and section == "Lịch sử giao dịch":
 # ================== PAGE: ADMIN - QUẢN TRỊ NỘI DUNG ================== #
 elif role == "admin" and section == "Quản trị nội dung":
     st.title("⚙️ Quản trị nội dung")
+
+
     tab1, tab2, tab3 = st.tabs(["Giới thiệu", "Liên hệ", "Hướng dẫn thanh toán"])
+
+
+    # --- Tab Giới thiệu ---
     with tab1:
-        df_cfg = read_df("Config")
+        try:
+            df_cfg = read_df("Config")
+        except Exception as e:
+            st.error(f"Lỗi đọc sheet Config: {e}")
+            df_cfg = pd.DataFrame()
+
+
         intro = ""
-        if not df_cfg.empty and "intro" in df_cfg["section"].values:
-            intro = df_cfg[df_cfg["section"] == "intro"]["content"].iloc[0]
+        if not df_cfg.empty and "section" in df_cfg.columns and "content" in df_cfg.columns:
+            mask = df_cfg["section"].astype(str) == "intro"
+            if mask.any():
+                intro = df_cfg.loc[mask, "content"].iloc[0]
+
+
         new_intro = st.text_area("Nội dung giới thiệu", intro, height=200)
         if st.button("💾 Lưu giới thiệu"):
-            sh = gs_client().open_by_key(SHEET_ID).worksheet("Config")
-            sh.update("B2", new_intro)
-            st.success("Đã lưu nội dung.")
+            try:
+                sh = gs_client().open_by_key(SHEET_ID).worksheet("Config")
+                # ví dụ: ô B2 dùng cho intro
+                sh.update("B2", new_intro)
+                st.success("Đã lưu nội dung giới thiệu.")
+            except Exception as e:
+                st.error(f"Lỗi khi lưu: {e}")
+
+
+    # --- Tab Liên hệ ---
     with tab2:
-        df_contact = read_df("Liên hệ")
-        if df_contact.empty: st.info("Chưa có liên hệ.")
-        else: st.dataframe(df_contact, use_container_width=True)
+        try:
+            df_contact = read_df("Liên hệ")
+        except Exception as e:
+            st.error(f"Lỗi đọc sheet 'Liên hệ': {e}")
+            df_contact = pd.DataFrame()
+
+
+        if df_contact.empty:
+            st.info("Chưa có liên hệ nào.")
+        else:
+            st.dataframe(df_contact, use_container_width=True)
+
+
+    # --- Tab Hướng dẫn thanh toán ---
     with tab3:
-        df_cfg = read_df("Config")
+        try:
+            df_cfg = read_df("Config")
+        except Exception as e:
+            st.error(f"Lỗi đọc sheet Config: {e}")
+            df_cfg = pd.DataFrame()
+
+
         payment = ""
-        if not df_cfg.empty and "payment" in df_cfg["section"].values:
-            payment = df_cfg[df_cfg["section"] == "payment"]["content"].iloc[0]
-        new_payment = st.text_area("Thông tin thanh toán", payment, height=200, placeholder="Ví dụ: STK, ngân hàng, tên chủ tài khoản...")
+        if not df_cfg.empty and "section" in df_cfg.columns and "content" in df_cfg.columns:
+            mask = df_cfg["section"].astype(str) == "payment"
+            if mask.any():
+                payment = df_cfg.loc[mask, "content"].iloc[0]
+
+
+        new_payment = st.text_area(
+            "Thông tin thanh toán",
+            payment,
+            height=200,
+            placeholder="Ví dụ: STK, ngân hàng, tên chủ tài khoản..."
+        )
         if st.button("💾 Lưu hướng dẫn"):
-            sh = gs_client().open_by_key(SHEET_ID).worksheet("Config")
-            sh.update("B3", new_payment)
-            st.success("Đã cập nhật hướng dẫn thanh toán.")
-
-
-
-
-
-
+            try:
+                sh = gs_client().open_by_key(SHEET_ID).worksheet("Config")
+                # ví dụ: ô B3 dùng cho hướng dẫn thanh toán
+                sh.update("B3", new_payment)
+                st.success("Đã cập nhật hướng dẫn thanh toán.")
+            except Exception as e:
+                st.error(f"Lỗi khi lưu: {e}")
 
 
 # ================== NHÀ ĐẦU TƯ ================== #
@@ -686,8 +858,18 @@ elif role == "investor" and section == "Trang chủ":
 
 
 
+
+
+
+
                     # Hiển thị nguyên bảng (không lọc)
                     st.dataframe(df_quan, use_container_width=True)
+
+
+
+
+
+
 
 
 
@@ -710,8 +892,14 @@ elif role == "investor" and section == "Trang chủ":
 
 
 
+
+
+
+
                     # Hiển thị nguyên bảng (không lọc)
                     st.dataframe(df_quan, use_container_width=True)
+
+
 
 
     # Giá trị tài sản ròng
@@ -730,6 +918,10 @@ elif role == "investor" and section == "Trang chủ":
 
 
 
+
+
+
+
                     # Hiển thị nguyên bảng (không lọc)
                     st.dataframe(df_quan, use_container_width=True)
                 # --- Biểu đồ lợi suất ---
@@ -741,9 +933,17 @@ elif role == "investor" and section == "Trang chủ":
 
 
 
+
+
+
+
     chart_url_3= "https://docs.google.com/spreadsheets/d/e/2PACX-1vS6e2vjKnnOkuR0647fha62VSxjNeLncCdlS_reyVG0GdgS7FPCmS3PlUX6RnM0bGyDIeYceVbBZmCq/pubchart?oid=2140726944&format=interactive"
     st.markdown("#### 🟩 Cơ cấu vốn")
     st.components.v1.iframe(chart_url_3,height=900)
+
+
+
+
 
 
 
@@ -832,6 +1032,14 @@ elif role == "investor" and section == "Giao dịch":
 
 
 
+
+
+
+
+
+
+
+
         if status_filter != "Tất cả":
             df_user = df_user[df_user["status"].str.lower() == status_filter.lower()]
 
@@ -842,8 +1050,24 @@ elif role == "investor" and section == "Giao dịch":
 
 
 
+
+
+
+
+
+
+
+
         df_user = df_user.sort_values("timestamp", ascending=(sort_order == "Cũ nhất"))
         st.dataframe(df_user, use_container_width=True)
+
+
+
+
+
+
+
+
 
 
 
@@ -876,6 +1100,14 @@ elif role == "investor" and section == "Thông tin cá nhân":
 
 
 
+
+
+
+
+
+
+
+
     username = st.session_state.get("username", "")
     prof = get_user_profile(username)
     st.title("👤 Thông tin cá nhân")
@@ -887,8 +1119,24 @@ elif role == "investor" and section == "Thông tin cá nhân":
 
 
 
+
+
+
+
+
+
+
+
     initials = (prof.get("display_name") or prof.get("username") or "U")[:1].upper()
     role_badge = (prof.get("role") or "").upper()
+
+
+
+
+
+
+
+
 
 
 
@@ -923,6 +1171,14 @@ elif role == "investor" and section == "Thông tin cá nhân":
 
 
 
+
+
+
+
+
+
+
+
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("📬 Liên lạc")
@@ -939,6 +1195,14 @@ elif role == "investor" and section == "Thông tin cá nhân":
 
 
 
+
+
+
+
+
+
+
+
     with col2:
         st.subheader("🪪 Định danh")
         st.write(f"**CCCD/MST:** {prof.get('cccd_mst','—')}")
@@ -947,6 +1211,14 @@ elif role == "investor" and section == "Thông tin cá nhân":
         st.write(f"**Vai trò:** {prof.get('role','—')}")
         if prof.get("fund"):
             st.write(f"**Thuộc quỹ:** {prof.get('fund')}")
+
+
+
+
+
+
+
+
 
 
 
@@ -974,6 +1246,112 @@ elif section == "Lịch sử giao dịch":
                     st.warning(f"❌ Lý do: {r.get('note','Không xác định')}")
                 elif r['status'] == "Thành công":
                     st.success("✅ Giao dịch hoàn tất.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
